@@ -35,3 +35,11 @@ out/
 
 ### VS Code ###
 .vscode/
+
+### Banco H2 local ###
+data/
+*.mv.db
+*.trace.db
+
+### Configuracao local (Parte 2 do onboarding) ###
+application-local.yaml

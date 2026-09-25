@@ -3,6 +3,12 @@ spring:
     url: jdbc:h2:mem:service_orders;MODE=MySQL;DB_CLOSE_DELAY=-1
     username: sa
     password:
+  sql:
+    init:
+      mode: always
+      # Nos testes o banco em memoria nasce vazio, entao o proprio script oficial cria a tabela
+      schema-locations: classpath:db/service_order.sql
   jpa:
     hibernate:
-      ddl-auto: create-drop
+      ddl-auto: none
+    open-in-view: false

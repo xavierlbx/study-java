@@ -43,11 +43,11 @@ Consequências práticas dessa escolha:
 
 - **Os dados persistem** entre reinícios da aplicação: o H2 grava o banco no arquivo `./data/service_orders.mv.db`. Para "zerar" o banco, basta parar a aplicação e apagar a pasta `data/`.
 - **A pasta `data/` não vai para o Git:** ela é estado local de cada máquina — adicione `data/` (ou `*.mv.db` / `*.trace.db`) ao `.gitignore`.
-- **Scripts de inicialização idempotentes:** como o `schema.sql` roda a cada start sobre um banco que já existe, use `CREATE TABLE IF NOT EXISTS`. Se houver `data.sql` com registros de exemplo, ele também precisa ser idempotente (ex.: `MERGE INTO ... KEY (protocol)`) para não violar o `UNIQUE` do protocolo no segundo start.
+- **Tabela criada à mão, como no documento original:** sem Flyway e sem `schema.sql` automático. O script oficial (idêntico à Parte 2 do onboarding) fica versionado em `src/main/resources/db/service_order.sql` e é executado **uma única vez** pelo H2 Console; com `ddl-auto: none`, a aplicação nunca mexe no schema. Como o banco é em arquivo, a tabela continua lá entre reinícios.
 - **Acesso concorrente ao arquivo:** o H2 em arquivo bloqueia o banco para um único processo. Adicione `AUTO_SERVER=TRUE` à URL se quiser abrir o mesmo arquivo pelo IntelliJ (Database tool) enquanto a aplicação roda.
-- **Sem credenciais reais:** o H2 usa o usuário padrão `sa` sem senha, então a configuração pode ficar em `application.yaml` versionado. Ainda assim, mantenha a estrutura de profile (`application-local.yaml`) e as variáveis de ambiente (`${DB_URL}`, `${DB_USER}`, `${DB_PASSWORD}`) com valores padrão apontando para o H2 — assim, trocar para o MySQL do time no futuro é só mudar as variáveis, sem tocar em código.
+- **Credenciais por variável de ambiente, sem arquivo `.env`:** como na Parte 2 do onboarding, o datasource fica em `application-local.yaml` (gitignored) lendo `${DB_NAME}`, `${DB_USER}` e `${DB_PASSWORD}` do sistema operacional, sem valor padrão. `DB_HOST`/`DB_PORT` do documento original não se aplicam a um H2 em arquivo. O H2 cria o banco com o usuário/senha da **primeira** conexão — para trocar a senha depois, apague a pasta `data/`. Defina as variáveis no shell (`$env:DB_USER="sa"` no PowerShell, `export DB_USER=sa` no bash) ou na Run Configuration do IntelliJ, junto com `SPRING_PROFILES_ACTIVE=local`.
 - **Console web:** o H2 Console (`/h2-console`) permite inspecionar a tabela e rodar `SELECT` durante o desenvolvimento.
-- **Diferenças de dialeto:** o modo MySQL do H2 cobre o uso deste projeto (DDL simples, `UNIQUE`, paginação), mas não é o MySQL real. Escreva o `schema.sql` com SQL portável e evite recursos específicos do MySQL.
+- **Diferenças de dialeto:** o modo MySQL do H2 aceita o script oficial sem alteração (`DATETIME`, `UNIQUE` inline, `AUTO_INCREMENT`), mas não é o MySQL real — evite recursos específicos do MySQL no restante do código.
 
 ### 1.3 Extras selecionados para este plano
 
@@ -88,13 +88,13 @@ Cada etapa termina em um estado executável e verificável — um **MVP**. O blo
 | # | O que fazer | Commit sugerido |
 |---|---|---|
 | 1 | Gerar o esqueleto em start.spring.io com Java 21, Gradle, e as dependências: Web, Data JPA, H2 Database, Validation, Lombok, springdoc-openapi-starter-webmvc-ui e MapStruct. | `chore: inicializa projeto spring boot via start.spring.io` |
-| 2 | Criar `src/main/resources/schema.sql` com o `CREATE TABLE IF NOT EXISTS service_order` (incluindo `UNIQUE` em `protocol` e a coluna `deleted_at`) e configurar `spring.sql.init.mode=always` + `spring.jpa.hibernate.ddl-auto=none`, para que a tabela seja criada pelo script e não pelo Hibernate (substitui o passo manual do documento original). | `chore: adiciona script de criacao da tabela service_order` |
-| 3 | Configurar o datasource H2 em `application.yaml`: `url: ${DB_URL:jdbc:h2:file:./data/service_orders;MODE=MySQL;AUTO_SERVER=TRUE}`, `username: ${DB_USER:sa}`, `password: ${DB_PASSWORD:}` e habilitar o console (`spring.h2.console.enabled=true`) apenas no profile `local`. Em `src/test/resources/application.yaml`, manter o H2 em memória (`jdbc:h2:mem:...`) para os testes. | `chore: configura datasource h2 em arquivo local e console no profile local` |
-| 4 | Adicionar `data/` ao `.gitignore` (junto com build, IDE e `.env`) e, opcionalmente, criar um `data.sql` idempotente (`MERGE INTO`) com algumas ordens de exemplo para facilitar os testes manuais. | `chore: ignora arquivos do banco h2 e adiciona dados de exemplo` |
+| 2 | Criar `src/main/resources/db/service_order.sql` com o `CREATE TABLE service_order` **exatamente** como na Parte 2 do onboarding. Ele não roda sozinho: é executado à mão no H2 Console (o documento original manda criar a tabela direto no banco, sem Flyway). Os testes reaproveitam o mesmo arquivo via `spring.sql.init.schema-locations`. | `chore: adiciona script oficial de criacao da tabela service_order` |
+| 3 | Trocar `mysql-connector-j` por `runtimeOnly 'com.h2database:h2'` no `build.gradle` e criar `application-local.yaml` no formato da Parte 2 do onboarding: `url: jdbc:h2:file:./data/${DB_NAME};MODE=MySQL;AUTO_SERVER=TRUE`, `username: ${DB_USER}`, `password: ${DB_PASSWORD}`, `ddl-auto: none`, `hibernate.format_sql: true` e o H2 Console habilitado. Em `src/test/resources/application.yaml`, manter o H2 em memória (`jdbc:h2:mem:...`) para os testes. | `chore: configura datasource h2 em arquivo no profile local` |
+| 4 | Adicionar `data/`, `*.mv.db`, `*.trace.db` e `application-local.yaml` ao `.gitignore`. | `chore: ignora arquivos do banco h2 e configuracao local` |
 
-> **Atenção:** o arquivo do banco (`data/service_orders.mv.db`) nunca deve ser commitado — confira o `.gitignore` antes do primeiro push. Mesmo sem credenciais reais, mantenha o hábito de ler usuário/senha de variáveis de ambiente (com default para o H2). Deixe explícito no README que o banco é H2 em arquivo local, substituindo o banco compartilhado do time citado no documento original.
+> **Atenção:** o arquivo do banco (`data/service_orders.mv.db`) nunca deve ser commitado — confira o `.gitignore` antes do primeiro push. Não há arquivo `.env`: mesmo sem credenciais reais, usuário/senha vêm de variáveis de ambiente do sistema (com default para o H2). Deixe explícito no README que o banco é H2 em arquivo local, substituindo o banco compartilhado do time citado no documento original.
 
-**MVP desta etapa — como validar:** `./gradlew bootRun` sobe a aplicação sem erro de conexão; o log de inicialização mostra o datasource H2 e a execução do `schema.sql`, e o arquivo `data/service_orders.mv.db` aparece no projeto. Abra `localhost:8080/h2-console` (JDBC URL `jdbc:h2:file:./data/service_orders;MODE=MySQL;AUTO_SERVER=TRUE`, usuário `sa`) e confirme com um `SELECT * FROM service_order` que a tabela existe. Reinicie a aplicação e confirme que ela sobe de novo sem erro (prova de que os scripts são idempotentes).
+**MVP desta etapa — como validar:** com `SPRING_PROFILES_ACTIVE=local`, `DB_NAME`, `DB_USER` e `DB_PASSWORD` definidas, `./gradlew bootRun` sobe com o profile `local` e o arquivo `data/<DB_NAME>.mv.db` aparece. Abra `localhost:8080/h2-console` (JDBC URL `jdbc:h2:file:./data/<DB_NAME>;MODE=MySQL;AUTO_SERVER=TRUE`, mesmo usuário/senha das variáveis), rode o conteúdo de `db/service_order.sql`, insira uma linha e confira com `SELECT * FROM service_order`. Reinicie a aplicação e confirme que a linha continua lá.
 
 ---
 
@@ -110,11 +110,11 @@ Cada etapa termina em um estado executável e verificável — um **MVP**. O blo
 | 4 | Criar `ServiceOrderEntity` (`@Entity`) espelhando a tabela e `JpaServiceOrderRepository` (extends `JpaRepository`) com `findByIdAndDeletedAtIsNull`, já respeitando o soft delete. | `feat: adiciona entidade JPA e repository JPA da ordem` |
 | 5 | Criar `ServiceOrderPersistenceMapper` com MapStruct (entity -> domínio) e `ServiceOrderPersistenceAdapter` implementando a porta. | `feat: adiciona mapper e persistence adapter da ordem de servico` |
 | 6 | Criar `GetServiceOrderByIdUseCase`, que recebe a porta por construtor e lança `ServiceOrderNotFoundException` quando o Optional vier vazio. | `feat: adiciona caso de uso de busca de ordem por id` |
-| 7 | Criar `ServiceOrderResponse` (record), `ServiceOrderWebMapper` (domínio -> DTO) e o `ServiceOrderController` com o endpoint `GET /service-orders/{id}` devolvendo 200. | `feat: adiciona endpoint de busca de ordem de servico por id` |
+| 7 | Criar `ServiceOrderResponse` (record), `ServiceOrderWebMapper` (domínio -> DTO) e o `ServiceOrderController` com o endpoint `GET /v1/service-order-management/service-orders/{id}` devolvendo 200. | `feat: adiciona endpoint de busca de ordem de servico por id` |
 
 > **Atenção:** esta é a etapa que mais ensina. Tudo a partir daqui é repetição deste mesmo caminho. O modelo de domínio fica anêmico por ora (só dados) e ganha comportamento na Etapa 3 — isso é deliberado, não o destino final.
 
-**MVP desta etapa — como validar:** Insira uma linha na tabela `service_order` via SQL (pelo H2 Console ou pelo `data.sql`) e chame `GET /service-orders/1`: deve voltar 200 com o JSON no formato do contrato. Um id inexistente ainda vai estourar 500 — isso é esperado, o tratamento vem na Etapa 4. Antes de seguir, saiba apontar no código por onde a requisição passou: controller → use case → porta → adapter → JPA → mapper → DTO.
+**MVP desta etapa — como validar:** Insira uma linha na tabela `service_order` via SQL (pelo H2 Console) e chame `GET /v1/service-order-management/service-orders/1`: deve voltar 200 com o JSON no formato do contrato. Um id inexistente ainda vai estourar 500 — isso é esperado, o tratamento vem na Etapa 4. Antes de seguir, saiba apontar no código por onde a requisição passou: controller → use case → porta → adapter → JPA → mapper → DTO.
 
 ---
 
@@ -124,10 +124,10 @@ Cada etapa termina em um estado executável e verificável — um **MVP**. O blo
 
 | # | O que fazer | Commit sugerido |
 |---|---|---|
-| 1 | POST: criar `ServiceOrderRequest` (record), estender a porta com `save`, implementar `CreateServiceOrderUseCase` forçando status inicial OPEN (Regra 2) e o endpoint `POST /service-orders` devolvendo 201 com header `Location`. | `feat: adiciona endpoint de criacao de ordem de servico` |
-| 2 | GET lista: estender a porta com `search(filter, pageable)`, criar `ServiceOrderFilter`, `SearchServiceOrdersUseCase` e o endpoint `GET /service-orders` com filtros `protocol/status/type` e o envelope `content/page/size/totalElements`. | `feat: adiciona endpoint de busca paginada com filtros` |
-| 3 | PUT: `UpdateServiceOrderUseCase` alterando apenas os dados da OS (protocolo imutável, status inalterado aqui) e o endpoint `PUT /service-orders/{id}`. | `feat: adiciona endpoint de atualizacao de dados da ordem` |
-| 4 | DELETE: `DeleteServiceOrderUseCase` preenchendo `deletedAt` (Regra 5 — soft delete) e o endpoint `DELETE /service-orders/{id}` devolvendo 204. | `feat: adiciona endpoint de remocao logica da ordem` |
+| 1 | POST: criar `ServiceOrderRequest` (record), estender a porta com `save`, implementar `CreateServiceOrderUseCase` forçando status inicial OPEN (Regra 2) e o endpoint `POST /v1/service-order-management/service-orders` devolvendo 201 com header `Location`. | `feat: adiciona endpoint de criacao de ordem de servico` |
+| 2 | GET lista: estender a porta com `search(filter, pageable)`, criar `ServiceOrderFilter`, `SearchServiceOrdersUseCase` e o endpoint `GET /v1/service-order-management/service-orders` com filtros `protocol/status/type` e o envelope `content/page/size/totalElements`. | `feat: adiciona endpoint de busca paginada com filtros` |
+| 3 | PUT: `UpdateServiceOrderUseCase` alterando apenas os dados da OS (protocolo imutável, status inalterado aqui) e o endpoint `PUT /v1/service-order-management/service-orders/{id}`. | `feat: adiciona endpoint de atualizacao de dados da ordem` |
+| 4 | DELETE: `DeleteServiceOrderUseCase` preenchendo `deletedAt` (Regra 5 — soft delete) e o endpoint `DELETE /v1/service-order-management/service-orders/{id}` devolvendo 204. | `feat: adiciona endpoint de remocao logica da ordem` |
 
 > **Atenção:** não se preocupe ainda com payload inválido, protocolo duplicado nem mensagens de erro bonitas — isso é Etapa 4. Aqui o objetivo é o caminho feliz dos 5 endpoints. Cada caso de uso depende apenas da porta (DIP), nunca do `JpaRepository`.
 
@@ -143,7 +143,7 @@ Cada etapa termina em um estado executável e verificável — um **MVP**. O blo
 |---|---|---|
 | 1 | Mover o comportamento para o domínio: criar o mapa de transições válidas e o método `ServiceOrder.changeStatusTo(novoStatus, data)` que rejeita transição inválida (Regra 3), lançando `InvalidStatusTransitionException`. | `feat: adiciona regra de transicao de status no dominio` |
 | 2 | Dentro do mesmo `changeStatusTo`, exigir `scheduledDate` ao passar para SCHEDULED e recusar data retroativa (Regra 4). | `feat: adiciona regra de agendamento obrigatorio no dominio` |
-| 3 | Criar `UpdateServiceOrderStatusUseCase` (que apenas delega ao método de domínio), o DTO `ChangeStatusRequest` e o endpoint `PATCH /service-orders/{id}/status`. | `feat: adiciona endpoint de mudanca de status da ordem` |
+| 3 | Criar `UpdateServiceOrderStatusUseCase` (que apenas delega ao método de domínio), o DTO `ChangeStatusRequest` e o endpoint `PATCH /v1/service-order-management/service-orders/{id}/status`. | `feat: adiciona endpoint de mudanca de status da ordem` |
 | 4 | Protocolo único (Regra 1): estender a porta com `existsByProtocol`, criar `DuplicateProtocolException` e aplicar a checagem no `CreateServiceOrderUseCase`. | `feat: adiciona validacao de protocolo unico na criacao` |
 | 5 | Geração automática de protocolo (extra selecionado): quando o campo `protocol` não vier no request, gerar no formato `OS-{ano}-{sequencial}`. | `feat: adiciona geracao automatica de protocolo quando omitido` |
 
@@ -180,7 +180,7 @@ Cada etapa termina em um estado executável e verificável — um **MVP**. O blo
 | 1 | Testes unitários do domínio: `ServiceOrder.changeStatusTo` cobrindo transições válidas, inválidas (Regra 3), SCHEDULED sem data e com data retroativa (Regra 4). Sem Spring, sem mock — é Java puro. | `test: adiciona testes das regras de transicao de status` |
 | 2 | Testes unitários dos casos de uso (create, update status, delete) com Mockito mockando a porta `ServiceOrderRepository` — aqui o DIP mostra o seu valor. | `test: adiciona testes unitarios dos casos de uso` |
 | 3 | Escrever o teste de integração com `@SpringBootTest` + `@AutoConfigureMockMvc` rodando contra o H2 em memória (profile de teste, separado do arquivo local de desenvolvimento), cobrindo criar → buscar → mudar status (e o 404 após o DELETE). Use `@Transactional` ou `@Sql` para isolar o estado entre os testes. | `test: adiciona teste de integracao com h2` |
-| 4 | Escrever o README: como rodar (`./gradlew bootRun`), como acessar o H2 Console, onde fica o arquivo do banco e como zerá-lo (apagar `data/`), variáveis de ambiente opcionais (`DB_URL`, `DB_USER`, `DB_PASSWORD`), nota explícita de que o banco é H2 em arquivo local substituindo o banco compartilhado do time citado no documento original, e as decisões de arquitetura (por que MapStruct, onde ficou cada regra, geração de protocolo). | `docs: adiciona readme com instrucoes e decisoes de arquitetura` |
+| 4 | Escrever o README: como rodar (`./gradlew bootRun`), como acessar o H2 Console, onde fica o arquivo do banco e como zerá-lo (apagar `data/`), como criar a tabela com `db/service_order.sql`, um modelo do `application-local.yaml` (ele é gitignored), as variáveis de ambiente obrigatórias (`SPRING_PROFILES_ACTIVE`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`) e como defini-las no PowerShell/bash/IntelliJ, nota explícita de que o banco é H2 em arquivo local substituindo o banco compartilhado do time citado no documento original, e as decisões de arquitetura (por que MapStruct, onde ficou cada regra, geração de protocolo). | `docs: adiciona readme com instrucoes e decisoes de arquitetura` |
 | 5 | Passar a checklist da Seção 3 deste plano item por item, revisar o histórico de commits e conferir que nenhuma credencial foi versionada. | — (revisão final, sem commit de código) |
 
 > **Atenção:** prepare a explicação de cada decisão — o bate-papo final de ~15 min avalia isso tanto quanto o código funcionar.
@@ -197,12 +197,12 @@ Conferência de que o plano acima cobre, item por item, tudo o que a Parte 3 (ch
 
 | Endpoint | Status esperados | Implementado em |
 |---|---|---|
-| `POST /service-orders` | 201 / 400 / 409 | Etapa 2, item 1 |
-| `GET /service-orders` | 200 / 204 | Etapa 2, item 2 |
-| `GET /service-orders/{id}` | 200 / 404 | Etapa 1, item 7 |
-| `PUT /service-orders/{id}` | 200 / 400 / 404 | Etapa 2, item 3 |
-| `PATCH /service-orders/{id}/status` | 200 / 400 / 404 / 409 | Etapa 3, item 3 |
-| `DELETE /service-orders/{id}` | 204 / 404 | Etapa 2, item 4 |
+| `POST /v1/service-order-management/service-orders` | 201 / 400 / 409 | Etapa 2, item 1 |
+| `GET /v1/service-order-management/service-orders` | 200 / 204 | Etapa 2, item 2 |
+| `GET /v1/service-order-management/service-orders/{id}` | 200 / 404 | Etapa 1, item 7 |
+| `PUT /v1/service-order-management/service-orders/{id}` | 200 / 400 / 404 | Etapa 2, item 3 |
+| `PATCH /v1/service-order-management/service-orders/{id}/status` | 200 / 400 / 404 / 409 | Etapa 3, item 3 |
+| `DELETE /v1/service-order-management/service-orders/{id}` | 204 / 404 | Etapa 2, item 4 |
 
 ### 3.2 As 5 regras de negócio
 
