@@ -1,0 +1,11 @@
+spring:
+  application:
+    name: service-orders
+  datasource:
+    url: ${DB_URL:jdbc:mysql://localhost:3306/service_orders?createDatabaseIfNotExist=true}
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:root}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
