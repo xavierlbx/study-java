@@ -1,5 +1,6 @@
 package br.lucas.com.service_orders.domain.model;
 
+import br.lucas.com.service_orders.domain.exception.InvalidScheduledDateException;
 import br.lucas.com.service_orders.domain.exception.InvalidStatusTransitionException;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -56,6 +57,12 @@ public class ServiceOrder {
             throw new InvalidStatusTransitionException(status, newStatus);
         }
         if (newStatus == SCHEDULED) {
+            if (scheduledDate == null) {
+                throw new InvalidScheduledDateException("Data de agendamento e obrigatoria para o status SCHEDULED.");
+            }
+            if (scheduledDate.isBefore(now.toLocalDate())) {
+                throw new InvalidScheduledDateException("Data de agendamento nao pode ser no passado: " + scheduledDate + ".");
+            }
             this.scheduledDate = scheduledDate;
         }
         this.status = newStatus;
