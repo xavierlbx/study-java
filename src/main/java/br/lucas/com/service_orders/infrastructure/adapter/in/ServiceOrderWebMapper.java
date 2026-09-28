@@ -21,6 +21,14 @@ public interface ServiceOrderWebMapper {
     @Mapping(target = "deletedAt", ignore = true)
     ServiceOrder toDomain(ServiceOrderRequest request);
 
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "protocol", ignore = true)
+    @Mapping(target = "status", ignore = true)
+    @Mapping(target = "createdAt", ignore = true)
+    @Mapping(target = "updatedAt", ignore = true)
+    @Mapping(target = "deletedAt", ignore = true)
+    ServiceOrder toDomain(UpdateServiceOrderRequest request);
+
     default PageResponse<ServiceOrderResponse> toPageResponse(PageResult<ServiceOrder> pageResult) {
         return new PageResponse<>(
                 toResponseList(pageResult.content()),

@@ -23,4 +23,14 @@ public class ServiceOrder {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private LocalDateTime deletedAt;
+
+    public void updateData(String customerName, String customerDocument, ServiceOrderType type,
+                           LocalDate scheduledDate, String notes, LocalDateTime updatedAt) {
+        this.customerName = customerName;
+        this.customerDocument = customerDocument;
+        this.type = type;
+        this.scheduledDate = scheduledDate;
+        this.notes = notes;
+        this.updatedAt = updatedAt;
+    }
 }
