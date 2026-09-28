@@ -13,5 +13,7 @@ public interface ServiceOrderRepository {
 
     ServiceOrder save(ServiceOrder serviceOrder);
 
+    boolean existsByProtocol(String protocol);
+
     PageResult<ServiceOrder> search(ServiceOrderFilter filter, PageQuery pageQuery);
 }

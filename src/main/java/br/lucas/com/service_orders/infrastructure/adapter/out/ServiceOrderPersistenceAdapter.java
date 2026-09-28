@@ -33,6 +33,11 @@ public class ServiceOrderPersistenceAdapter implements ServiceOrderRepository {
     }
 
     @Override
+    public boolean existsByProtocol(String protocol) {
+        return jpaRepository.existsByProtocol(protocol);
+    }
+
+    @Override
     public PageResult<ServiceOrder> search(ServiceOrderFilter filter, PageQuery pageQuery) {
         PageRequest pageable = PageRequest.of(pageQuery.page(), pageQuery.size(), Sort.by("id"));
         Page<ServiceOrderEntity> page = jpaRepository.search(filter.protocol(), filter.status(), filter.type(), pageable);

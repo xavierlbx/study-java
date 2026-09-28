@@ -14,6 +14,9 @@ public interface JpaServiceOrderRepository extends JpaRepository<ServiceOrderEnt
 
     Optional<ServiceOrderEntity> findByIdAndDeletedAtIsNull(Long id);
 
+    // Sem filtro de deletedAt: a constraint UNIQUE da tabela vale tambem para registros removidos logicamente
+    boolean existsByProtocol(String protocol);
+
     @Query("""
             SELECT s FROM ServiceOrderEntity s
             WHERE s.deletedAt IS NULL
