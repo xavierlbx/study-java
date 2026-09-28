@@ -4,6 +4,7 @@ import br.lucas.com.service_orders.application.usecase.CreateServiceOrderUseCase
 import br.lucas.com.service_orders.application.usecase.DeleteServiceOrderUseCase;
 import br.lucas.com.service_orders.application.usecase.GetServiceOrderByIdUseCase;
 import br.lucas.com.service_orders.application.usecase.SearchServiceOrdersUseCase;
+import br.lucas.com.service_orders.application.usecase.UpdateServiceOrderStatusUseCase;
 import br.lucas.com.service_orders.application.usecase.UpdateServiceOrderUseCase;
 import br.lucas.com.service_orders.domain.model.PageQuery;
 import br.lucas.com.service_orders.domain.model.PageResult;
@@ -15,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -35,6 +37,7 @@ public class ServiceOrderController {
     private final GetServiceOrderByIdUseCase getServiceOrderByIdUseCase;
     private final SearchServiceOrdersUseCase searchServiceOrdersUseCase;
     private final UpdateServiceOrderUseCase updateServiceOrderUseCase;
+    private final UpdateServiceOrderStatusUseCase updateServiceOrderStatusUseCase;
     private final DeleteServiceOrderUseCase deleteServiceOrderUseCase;
     private final ServiceOrderWebMapper serviceOrderWebMapper;
 
@@ -70,6 +73,13 @@ public class ServiceOrderController {
     public ResponseEntity<ServiceOrderResponse> update(@PathVariable Long id,
                                                        @RequestBody UpdateServiceOrderRequest request) {
         ServiceOrder updated = updateServiceOrderUseCase.execute(id, serviceOrderWebMapper.toDomain(request));
+        return ResponseEntity.ok(serviceOrderWebMapper.toResponse(updated));
+    }
+
+    @PatchMapping("/{id}/status")
+    public ResponseEntity<ServiceOrderResponse> changeStatus(@PathVariable Long id,
+                                                             @RequestBody ChangeStatusRequest request) {
+        ServiceOrder updated = updateServiceOrderStatusUseCase.execute(id, request.status(), request.scheduledDate());
         return ResponseEntity.ok(serviceOrderWebMapper.toResponse(updated));
     }
 
