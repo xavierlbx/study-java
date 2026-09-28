@@ -7,4 +7,6 @@ import java.util.Optional;
 public interface ServiceOrderRepository {
 
     Optional<ServiceOrder> findById(Long id);
+
+    ServiceOrder save(ServiceOrder serviceOrder);
 }

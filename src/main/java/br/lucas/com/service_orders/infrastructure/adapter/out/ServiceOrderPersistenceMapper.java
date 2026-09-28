@@ -7,4 +7,6 @@ import org.mapstruct.Mapper;
 public interface ServiceOrderPersistenceMapper {
 
     ServiceOrder toDomain(ServiceOrderEntity entity);
+
+    ServiceOrderEntity toEntity(ServiceOrder serviceOrder);
 }

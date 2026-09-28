@@ -19,4 +19,10 @@ public class ServiceOrderPersistenceAdapter implements ServiceOrderRepository {
         return jpaRepository.findByIdAndDeletedAtIsNull(id)
                 .map(mapper::toDomain);
     }
+
+    @Override
+    public ServiceOrder save(ServiceOrder serviceOrder) {
+        ServiceOrderEntity savedEntity = jpaRepository.save(mapper.toEntity(serviceOrder));
+        return mapper.toDomain(savedEntity);
+    }
 }
