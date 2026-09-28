@@ -15,5 +15,7 @@ public interface ServiceOrderRepository {
 
     boolean existsByProtocol(String protocol);
 
+    long countByProtocolStartingWith(String prefix);
+
     PageResult<ServiceOrder> search(ServiceOrderFilter filter, PageQuery pageQuery);
 }

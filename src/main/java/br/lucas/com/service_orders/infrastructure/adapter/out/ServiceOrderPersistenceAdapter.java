@@ -38,6 +38,11 @@ public class ServiceOrderPersistenceAdapter implements ServiceOrderRepository {
     }
 
     @Override
+    public long countByProtocolStartingWith(String prefix) {
+        return jpaRepository.countByProtocolStartingWith(prefix);
+    }
+
+    @Override
     public PageResult<ServiceOrder> search(ServiceOrderFilter filter, PageQuery pageQuery) {
         PageRequest pageable = PageRequest.of(pageQuery.page(), pageQuery.size(), Sort.by("id"));
         Page<ServiceOrderEntity> page = jpaRepository.search(filter.protocol(), filter.status(), filter.type(), pageable);
