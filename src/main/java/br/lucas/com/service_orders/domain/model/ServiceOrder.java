@@ -33,4 +33,9 @@ public class ServiceOrder {
         this.notes = notes;
         this.updatedAt = updatedAt;
     }
+
+    public void markAsDeleted(LocalDateTime deletedAt) {
+        this.deletedAt = deletedAt;
+        this.updatedAt = deletedAt;
+    }
 }

@@ -1,6 +1,7 @@
 package br.lucas.com.service_orders.infrastructure.adapter.in;
 
 import br.lucas.com.service_orders.application.usecase.CreateServiceOrderUseCase;
+import br.lucas.com.service_orders.application.usecase.DeleteServiceOrderUseCase;
 import br.lucas.com.service_orders.application.usecase.GetServiceOrderByIdUseCase;
 import br.lucas.com.service_orders.application.usecase.SearchServiceOrdersUseCase;
 import br.lucas.com.service_orders.application.usecase.UpdateServiceOrderUseCase;
@@ -12,6 +13,7 @@ import br.lucas.com.service_orders.domain.model.ServiceOrderStatus;
 import br.lucas.com.service_orders.domain.model.ServiceOrderType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -33,6 +35,7 @@ public class ServiceOrderController {
     private final GetServiceOrderByIdUseCase getServiceOrderByIdUseCase;
     private final SearchServiceOrdersUseCase searchServiceOrdersUseCase;
     private final UpdateServiceOrderUseCase updateServiceOrderUseCase;
+    private final DeleteServiceOrderUseCase deleteServiceOrderUseCase;
     private final ServiceOrderWebMapper serviceOrderWebMapper;
 
     @PostMapping
@@ -68,5 +71,11 @@ public class ServiceOrderController {
                                                        @RequestBody UpdateServiceOrderRequest request) {
         ServiceOrder updated = updateServiceOrderUseCase.execute(id, serviceOrderWebMapper.toDomain(request));
         return ResponseEntity.ok(serviceOrderWebMapper.toResponse(updated));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
+        deleteServiceOrderUseCase.execute(id);
+        return ResponseEntity.noContent().build();
     }
 }
