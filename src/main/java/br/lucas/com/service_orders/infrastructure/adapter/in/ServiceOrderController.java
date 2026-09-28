@@ -2,7 +2,13 @@ package br.lucas.com.service_orders.infrastructure.adapter.in;
 
 import br.lucas.com.service_orders.application.usecase.CreateServiceOrderUseCase;
 import br.lucas.com.service_orders.application.usecase.GetServiceOrderByIdUseCase;
+import br.lucas.com.service_orders.application.usecase.SearchServiceOrdersUseCase;
+import br.lucas.com.service_orders.domain.model.PageQuery;
+import br.lucas.com.service_orders.domain.model.PageResult;
 import br.lucas.com.service_orders.domain.model.ServiceOrder;
+import br.lucas.com.service_orders.domain.model.ServiceOrderFilter;
+import br.lucas.com.service_orders.domain.model.ServiceOrderStatus;
+import br.lucas.com.service_orders.domain.model.ServiceOrderType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -10,6 +16,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
@@ -22,6 +29,7 @@ public class ServiceOrderController {
 
     private final CreateServiceOrderUseCase createServiceOrderUseCase;
     private final GetServiceOrderByIdUseCase getServiceOrderByIdUseCase;
+    private final SearchServiceOrdersUseCase searchServiceOrdersUseCase;
     private final ServiceOrderWebMapper serviceOrderWebMapper;
 
     @PostMapping
@@ -32,6 +40,19 @@ public class ServiceOrderController {
                 .buildAndExpand(created.getId())
                 .toUri();
         return ResponseEntity.created(location).body(serviceOrderWebMapper.toResponse(created));
+    }
+
+    @GetMapping
+    public ResponseEntity<PageResponse<ServiceOrderResponse>> search(
+            @RequestParam(required = false) String protocol,
+            @RequestParam(required = false) ServiceOrderStatus status,
+            @RequestParam(required = false) ServiceOrderType type,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        PageResult<ServiceOrder> result = searchServiceOrdersUseCase.execute(
+                new ServiceOrderFilter(protocol, status, type),
+                new PageQuery(page, size));
+        return ResponseEntity.ok(serviceOrderWebMapper.toPageResponse(result));
     }
 
     @GetMapping("/{id}")
