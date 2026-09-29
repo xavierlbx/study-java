@@ -12,6 +12,9 @@ import br.lucas.com.service_orders.domain.model.ServiceOrder;
 import br.lucas.com.service_orders.domain.model.ServiceOrderFilter;
 import br.lucas.com.service_orders.domain.model.ServiceOrderStatus;
 import br.lucas.com.service_orders.domain.model.ServiceOrderType;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -42,7 +45,7 @@ public class ServiceOrderController {
     private final ServiceOrderWebMapper serviceOrderWebMapper;
 
     @PostMapping
-    public ResponseEntity<ServiceOrderResponse> create(@RequestBody ServiceOrderRequest request) {
+    public ResponseEntity<ServiceOrderResponse> create(@Valid @RequestBody ServiceOrderRequest request) {
         ServiceOrder created = createServiceOrderUseCase.execute(serviceOrderWebMapper.toDomain(request));
         URI location = ServletUriComponentsBuilder.fromCurrentRequest()
                 .path("/{id}")
@@ -56,8 +59,9 @@ public class ServiceOrderController {
             @RequestParam(required = false) String protocol,
             @RequestParam(required = false) ServiceOrderStatus status,
             @RequestParam(required = false) ServiceOrderType type,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
+            @RequestParam(defaultValue = "0") @Min(value = 0, message = "deve ser maior ou igual a 0") int page,
+            @RequestParam(defaultValue = "20") @Min(value = 1, message = "deve ser maior ou igual a 1")
+            @Max(value = 100, message = "deve ser menor ou igual a 100") int size) {
         PageResult<ServiceOrder> result = searchServiceOrdersUseCase.execute(
                 new ServiceOrderFilter(protocol, status, type),
                 new PageQuery(page, size));
@@ -71,14 +75,14 @@ public class ServiceOrderController {
 
     @PutMapping("/{id}")
     public ResponseEntity<ServiceOrderResponse> update(@PathVariable Long id,
-                                                       @RequestBody UpdateServiceOrderRequest request) {
+                                                       @Valid @RequestBody UpdateServiceOrderRequest request) {
         ServiceOrder updated = updateServiceOrderUseCase.execute(id, serviceOrderWebMapper.toDomain(request));
         return ResponseEntity.ok(serviceOrderWebMapper.toResponse(updated));
     }
 
     @PatchMapping("/{id}/status")
     public ResponseEntity<ServiceOrderResponse> changeStatus(@PathVariable Long id,
-                                                             @RequestBody ChangeStatusRequest request) {
+                                                             @Valid @RequestBody ChangeStatusRequest request) {
         ServiceOrder updated = updateServiceOrderStatusUseCase.execute(id, request.status(), request.scheduledDate());
         return ResponseEntity.ok(serviceOrderWebMapper.toResponse(updated));
     }
