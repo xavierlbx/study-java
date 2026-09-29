@@ -65,6 +65,9 @@ public class ServiceOrderController {
         PageResult<ServiceOrder> result = searchServiceOrdersUseCase.execute(
                 new ServiceOrderFilter(protocol, status, type),
                 new PageQuery(page, size));
+        if (result.content().isEmpty()) {
+            return ResponseEntity.noContent().build();
+        }
         return ResponseEntity.ok(serviceOrderWebMapper.toPageResponse(result));
     }
 
