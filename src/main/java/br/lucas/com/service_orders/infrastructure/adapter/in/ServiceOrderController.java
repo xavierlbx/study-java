@@ -12,6 +12,12 @@ import br.lucas.com.service_orders.domain.model.ServiceOrder;
 import br.lucas.com.service_orders.domain.model.ServiceOrderFilter;
 import br.lucas.com.service_orders.domain.model.ServiceOrderStatus;
 import br.lucas.com.service_orders.domain.model.ServiceOrderType;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -31,6 +37,7 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.net.URI;
 
+@Tag(name = "Ordens de Servico", description = "Gestao de ordens de servico (instalacao, reparo e mudanca de endereco)")
 @RestController
 @RequestMapping("/v1/service-order-management/service-orders")
 @RequiredArgsConstructor
@@ -44,6 +51,15 @@ public class ServiceOrderController {
     private final DeleteServiceOrderUseCase deleteServiceOrderUseCase;
     private final ServiceOrderWebMapper serviceOrderWebMapper;
 
+    @Operation(summary = "Cria uma ordem de servico",
+            description = "Toda OS nasce com status OPEN. Se o protocolo nao for informado, e gerado no formato OS-{ano}-{sequencial}.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "201", description = "Ordem de servico criada"),
+            @ApiResponse(responseCode = "400", description = "Payload invalido",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "409", description = "Protocolo ja existe",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
     @PostMapping
     public ResponseEntity<ServiceOrderResponse> create(@Valid @RequestBody ServiceOrderRequest request) {
         ServiceOrder created = createServiceOrderUseCase.execute(serviceOrderWebMapper.toDomain(request));
@@ -54,6 +70,14 @@ public class ServiceOrderController {
         return ResponseEntity.created(location).body(serviceOrderWebMapper.toResponse(created));
     }
 
+    @Operation(summary = "Busca paginada de ordens de servico",
+            description = "Filtros opcionais por protocolo, status e tipo. Ordens removidas nao aparecem.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Pagina com as ordens encontradas"),
+            @ApiResponse(responseCode = "204", description = "Nenhuma ordem encontrada", content = @Content),
+            @ApiResponse(responseCode = "400", description = "Parametros invalidos",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
     @GetMapping
     public ResponseEntity<PageResponse<ServiceOrderResponse>> search(
             @RequestParam(required = false) String protocol,
@@ -71,11 +95,26 @@ public class ServiceOrderController {
         return ResponseEntity.ok(serviceOrderWebMapper.toPageResponse(result));
     }
 
+    @Operation(summary = "Busca uma ordem de servico por id")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Ordem de servico encontrada"),
+            @ApiResponse(responseCode = "404", description = "Ordem inexistente ou removida",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
     @GetMapping("/{id}")
     public ResponseEntity<ServiceOrderResponse> getById(@PathVariable Long id) {
         return ResponseEntity.ok(serviceOrderWebMapper.toResponse(getServiceOrderByIdUseCase.execute(id)));
     }
 
+    @Operation(summary = "Atualiza os dados de uma ordem de servico",
+            description = "O protocolo e imutavel e o status nao muda aqui (use o PATCH de status).")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Ordem de servico atualizada"),
+            @ApiResponse(responseCode = "400", description = "Payload invalido",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Ordem inexistente ou removida",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
     @PutMapping("/{id}")
     public ResponseEntity<ServiceOrderResponse> update(@PathVariable Long id,
                                                        @Valid @RequestBody UpdateServiceOrderRequest request) {
@@ -83,6 +122,17 @@ public class ServiceOrderController {
         return ResponseEntity.ok(serviceOrderWebMapper.toResponse(updated));
     }
 
+    @Operation(summary = "Muda o status de uma ordem de servico",
+            description = "Respeita as transicoes validas. Para SCHEDULED, scheduledDate e obrigatorio e nao pode ser no passado.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Status alterado"),
+            @ApiResponse(responseCode = "400", description = "Payload invalido ou data de agendamento ausente/no passado",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Ordem inexistente ou removida",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "409", description = "Transicao de status nao permitida",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
     @PatchMapping("/{id}/status")
     public ResponseEntity<ServiceOrderResponse> changeStatus(@PathVariable Long id,
                                                              @Valid @RequestBody ChangeStatusRequest request) {
@@ -90,6 +140,13 @@ public class ServiceOrderController {
         return ResponseEntity.ok(serviceOrderWebMapper.toResponse(updated));
     }
 
+    @Operation(summary = "Remove uma ordem de servico",
+            description = "Remocao logica (soft delete): a linha permanece no banco com deletedAt preenchido.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "Ordem de servico removida", content = @Content),
+            @ApiResponse(responseCode = "404", description = "Ordem inexistente ou ja removida",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         deleteServiceOrderUseCase.execute(id);
