@@ -4,6 +4,7 @@ import br.lucas.com.service_orders.domain.exception.DuplicateProtocolException;
 import br.lucas.com.service_orders.domain.exception.InvalidScheduledDateException;
 import br.lucas.com.service_orders.domain.exception.InvalidStatusTransitionException;
 import br.lucas.com.service_orders.domain.exception.ServiceOrderNotFoundException;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
@@ -17,6 +18,7 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 
 import java.util.stream.Collectors;
 
+@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
@@ -37,6 +39,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleUnexpected(Exception ex) {
+        log.error("Erro inesperado ao processar a requisicao.", ex);
         return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, "Erro interno inesperado.");
     }
 

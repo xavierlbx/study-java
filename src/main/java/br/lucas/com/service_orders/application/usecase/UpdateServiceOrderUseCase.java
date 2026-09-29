@@ -4,10 +4,12 @@ import br.lucas.com.service_orders.domain.exception.ServiceOrderNotFoundExceptio
 import br.lucas.com.service_orders.domain.model.ServiceOrder;
 import br.lucas.com.service_orders.domain.port.ServiceOrderRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class UpdateServiceOrderUseCase {
@@ -24,6 +26,8 @@ public class UpdateServiceOrderUseCase {
                 newData.getScheduledDate(),
                 newData.getNotes(),
                 LocalDateTime.now());
-        return serviceOrderRepository.save(serviceOrder);
+        ServiceOrder updated = serviceOrderRepository.save(serviceOrder);
+        log.info("Dados da ordem de servico atualizados: id={} protocolo={}", updated.getId(), updated.getProtocol());
+        return updated;
     }
 }

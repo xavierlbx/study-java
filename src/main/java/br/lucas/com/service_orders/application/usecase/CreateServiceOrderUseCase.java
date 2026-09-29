@@ -5,10 +5,12 @@ import br.lucas.com.service_orders.domain.model.ServiceOrder;
 import br.lucas.com.service_orders.domain.model.ServiceOrderStatus;
 import br.lucas.com.service_orders.domain.port.ServiceOrderRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class CreateServiceOrderUseCase {
@@ -21,6 +23,7 @@ public class CreateServiceOrderUseCase {
                 ? generateProtocol(now.getYear())
                 : serviceOrder.getProtocol();
         if (serviceOrderRepository.existsByProtocol(protocol)) {
+            log.warn("Tentativa de criar ordem de servico com protocolo duplicado: protocolo={}", protocol);
             throw new DuplicateProtocolException(protocol);
         }
         ServiceOrder newServiceOrder = serviceOrder.toBuilder()
@@ -31,7 +34,9 @@ public class CreateServiceOrderUseCase {
                 .updatedAt(now)
                 .deletedAt(null)
                 .build();
-        return serviceOrderRepository.save(newServiceOrder);
+        ServiceOrder created = serviceOrderRepository.save(newServiceOrder);
+        log.info("Ordem de servico criada: id={} protocolo={}", created.getId(), created.getProtocol());
+        return created;
     }
 
     private String generateProtocol(int year) {
