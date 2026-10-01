@@ -1,5 +1,6 @@
 package br.lucas.com.service_orders.application.usecase;
 
+import br.lucas.com.service_orders.domain.exception.ServiceOrderNotFoundException;
 import br.lucas.com.service_orders.domain.model.ServiceOrder;
 import br.lucas.com.service_orders.domain.model.ServiceOrderStatus;
 import br.lucas.com.service_orders.domain.model.ServiceOrderType;
@@ -16,7 +17,9 @@ import java.time.LocalDateTime;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -61,6 +64,38 @@ class UpdateServiceOrderUseCaseTest {
         assertThat(saved.getStatus()).isEqualTo(ServiceOrderStatus.OPEN);
         assertThat(saved.getCreatedAt()).isEqualTo(originalCreatedAt);
         assertThat(saved.getUpdatedAt()).isAfter(originalUpdatedAt);
+    }
+
+    @Test
+    void shouldThrowNotFoundWhenServiceOrderDoesNotExist() {
+        ServiceOrder newData = ServiceOrder.builder().customerName("Maria Souza Lima").build();
+        when(serviceOrderRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> updateServiceOrderUseCase.execute(99L, newData))
+                .isInstanceOf(ServiceOrderNotFoundException.class);
+
+        verify(serviceOrderRepository, never()).save(any(ServiceOrder.class));
+    }
+
+    @Test
+    void shouldClearOptionalFieldsWhenNull() {
+        ServiceOrder existing = existingServiceOrder(1L).toBuilder()
+                .scheduledDate(LocalDate.now().plusDays(5))
+                .build();
+        ServiceOrder newData = ServiceOrder.builder()
+                .customerName("Maria Souza")
+                .customerDocument("12345678901")
+                .type(ServiceOrderType.INSTALLATION)
+                .scheduledDate(null)
+                .notes(null)
+                .build();
+        when(serviceOrderRepository.findById(1L)).thenReturn(Optional.of(existing));
+        when(serviceOrderRepository.save(any(ServiceOrder.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        ServiceOrder updated = updateServiceOrderUseCase.execute(1L, newData);
+
+        assertThat(updated.getScheduledDate()).isNull();
+        assertThat(updated.getNotes()).isNull();
     }
 
     private ServiceOrder existingServiceOrder(Long id) {
