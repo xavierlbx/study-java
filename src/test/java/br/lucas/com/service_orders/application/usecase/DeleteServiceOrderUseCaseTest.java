@@ -1,5 +1,6 @@
 package br.lucas.com.service_orders.application.usecase;
 
+import br.lucas.com.service_orders.domain.exception.ServiceOrderNotFoundException;
 import br.lucas.com.service_orders.domain.model.ServiceOrder;
 import br.lucas.com.service_orders.domain.model.ServiceOrderStatus;
 import br.lucas.com.service_orders.domain.model.ServiceOrderType;
@@ -15,6 +16,9 @@ import java.time.LocalDateTime;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -40,6 +44,16 @@ class DeleteServiceOrderUseCaseTest {
         assertThat(saved.getId()).isEqualTo(1L);
         assertThat(saved.getDeletedAt()).isNotNull();
         assertThat(saved.getUpdatedAt()).isEqualTo(saved.getDeletedAt());
+    }
+
+    @Test
+    void shouldThrowNotFoundWhenServiceOrderDoesNotExist() {
+        when(serviceOrderRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> deleteServiceOrderUseCase.execute(99L))
+                .isInstanceOf(ServiceOrderNotFoundException.class);
+
+        verify(serviceOrderRepository, never()).save(any(ServiceOrder.class));
     }
 
     private ServiceOrder existingServiceOrder(Long id) {
