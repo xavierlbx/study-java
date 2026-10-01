@@ -1,5 +1,9 @@
 package br.lucas.com.service_orders.integration;
 
+import br.lucas.com.service_orders.domain.model.ServiceOrder;
+import br.lucas.com.service_orders.domain.model.ServiceOrderStatus;
+import br.lucas.com.service_orders.domain.model.ServiceOrderType;
+import br.lucas.com.service_orders.domain.port.ServiceOrderRepository;
 import br.lucas.com.service_orders.infrastructure.adapter.out.JpaServiceOrderRepository;
 import br.lucas.com.service_orders.infrastructure.adapter.out.ServiceOrderEntity;
 import com.jayway.jsonpath.JsonPath;
@@ -13,6 +17,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.matchesPattern;
@@ -35,6 +40,9 @@ class ServiceOrderIntegrationTest {
 
     @Autowired
     private JpaServiceOrderRepository jpaServiceOrderRepository;
+
+    @Autowired
+    private ServiceOrderRepository serviceOrderRepository;
 
     @BeforeEach
     void cleanDatabase() {
@@ -94,5 +102,41 @@ class ServiceOrderIntegrationTest {
         assertThat(row.getDeletedAt()).isNotNull();
         assertThat(row.getStatus().name()).isEqualTo("SCHEDULED");
         assertThat(row.getScheduledDate()).isEqualTo(LocalDate.parse(scheduledDate));
+    }
+
+    @Test
+    void shouldSearchWithFiltersAndPaginationIgnoringDeleted() throws Exception {
+        saveServiceOrder("OS-2026-0001", ServiceOrderStatus.OPEN, ServiceOrderType.INSTALLATION, null);
+        saveServiceOrder("OS-2026-0002", ServiceOrderStatus.OPEN, ServiceOrderType.INSTALLATION, null);
+        saveServiceOrder("OS-2026-0003", ServiceOrderStatus.OPEN, ServiceOrderType.REPAIR, null);
+        saveServiceOrder("OS-2026-0004", ServiceOrderStatus.SCHEDULED, ServiceOrderType.INSTALLATION, null);
+        saveServiceOrder("OS-2026-0005", ServiceOrderStatus.OPEN, ServiceOrderType.INSTALLATION, LocalDateTime.now());
+
+        mockMvc.perform(get(BASE_URL)
+                        .param("status", "OPEN")
+                        .param("type", "INSTALLATION")
+                        .param("page", "0")
+                        .param("size", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(1))
+                .andExpect(jsonPath("$.content[0].protocol").value("OS-2026-0001"))
+                .andExpect(jsonPath("$.page").value(0))
+                .andExpect(jsonPath("$.size").value(1))
+                .andExpect(jsonPath("$.totalElements").value(2));
+    }
+
+    private void saveServiceOrder(String protocol, ServiceOrderStatus status, ServiceOrderType type,
+                                  LocalDateTime deletedAt) {
+        LocalDateTime now = LocalDateTime.now();
+        serviceOrderRepository.save(ServiceOrder.builder()
+                .protocol(protocol)
+                .customerName("Maria Souza")
+                .customerDocument("12345678901")
+                .type(type)
+                .status(status)
+                .createdAt(now)
+                .updatedAt(now)
+                .deletedAt(deletedAt)
+                .build());
     }
 }
