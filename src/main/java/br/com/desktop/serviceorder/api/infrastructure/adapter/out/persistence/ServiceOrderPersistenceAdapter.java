@@ -10,6 +10,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
 
@@ -21,28 +22,33 @@ public class ServiceOrderPersistenceAdapter implements ServiceOrderRepository {
     private final ServiceOrderPersistenceMapper mapper;
 
     @Override
+    @Transactional(readOnly = true)
     public Optional<ServiceOrder> findById(Long id) {
         return jpaRepository.findByIdAndDeletedAtIsNull(id)
                 .map(mapper::toDomain);
     }
 
     @Override
+    @Transactional
     public ServiceOrder save(ServiceOrder serviceOrder) {
         ServiceOrderEntity savedEntity = jpaRepository.save(mapper.toEntity(serviceOrder));
         return mapper.toDomain(savedEntity);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public boolean existsByProtocol(String protocol) {
         return jpaRepository.existsByProtocol(protocol);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public long countByProtocolStartingWith(String prefix) {
         return jpaRepository.countByProtocolStartingWith(prefix);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public PageResult<ServiceOrder> search(ServiceOrderFilter filter, PageQuery pageQuery) {
         PageRequest pageable = PageRequest.of(pageQuery.page(), pageQuery.size(), Sort.by("id"));
         Page<ServiceOrderEntity> page = jpaRepository.search(filter.protocol(), filter.status(), filter.type(), pageable);

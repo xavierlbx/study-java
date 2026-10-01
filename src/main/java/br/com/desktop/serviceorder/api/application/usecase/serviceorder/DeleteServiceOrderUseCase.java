@@ -5,12 +5,12 @@ import br.com.desktop.serviceorder.api.domain.serviceorder.exception.ServiceOrde
 import br.com.desktop.serviceorder.api.domain.serviceorder.repository.ServiceOrderRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
 
 @Slf4j
-@Service
+@Component
 @RequiredArgsConstructor
 public class DeleteServiceOrderUseCase {
 

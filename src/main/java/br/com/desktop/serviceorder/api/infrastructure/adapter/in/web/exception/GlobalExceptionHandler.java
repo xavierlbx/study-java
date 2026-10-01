@@ -4,6 +4,8 @@ import br.com.desktop.serviceorder.api.domain.serviceorder.exception.DuplicatePr
 import br.com.desktop.serviceorder.api.domain.serviceorder.exception.InvalidScheduledDateException;
 import br.com.desktop.serviceorder.api.domain.serviceorder.exception.InvalidStatusTransitionException;
 import br.com.desktop.serviceorder.api.domain.serviceorder.exception.ServiceOrderNotFoundException;
+import jakarta.validation.ConstraintViolationException;
+import jakarta.validation.Path;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -35,6 +37,16 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(InvalidScheduledDateException.class)
     public ResponseEntity<ErrorResponse> handleInvalidScheduledDate(InvalidScheduledDateException ex) {
         return buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
+    }
+
+    // Com @Validated no controller, a validacao de parametros (id, page, size) passa a lancar esta excecao
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ResponseEntity<ErrorResponse> handleConstraintViolation(ConstraintViolationException ex) {
+        String message = ex.getConstraintViolations().stream()
+                .map(violation -> parameterName(violation.getPropertyPath()) + ": " + violation.getMessage())
+                .sorted()
+                .collect(Collectors.joining("; "));
+        return buildResponse(HttpStatus.BAD_REQUEST, message);
     }
 
     @ExceptionHandler(Exception.class)
@@ -71,6 +83,14 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
                                                              HttpStatusCode statusCode, WebRequest request) {
         ErrorResponse errorResponse = ErrorResponse.of(statusCode.value(), messageFor(statusCode));
         return new ResponseEntity<>(errorResponse, headers, statusCode);
+    }
+
+    private String parameterName(Path propertyPath) {
+        String name = null;
+        for (Path.Node node : propertyPath) {
+            name = node.getName();
+        }
+        return name;
     }
 
     private String messageFor(HttpStatusCode statusCode) {

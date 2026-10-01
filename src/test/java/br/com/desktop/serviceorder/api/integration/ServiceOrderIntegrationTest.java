@@ -125,6 +125,24 @@ class ServiceOrderIntegrationTest {
                 .andExpect(jsonPath("$.totalElements").value(2));
     }
 
+    @Test
+    void shouldReturnBadRequestWhenIdOrPaginationIsInvalid() throws Exception {
+        mockMvc.perform(get(BASE_URL + "/{id}", 0))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.timestamp").exists())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.message").value("id: deve ser maior ou igual a 1"));
+
+        mockMvc.perform(delete(BASE_URL + "/{id}", -1))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("id: deve ser maior ou igual a 1"));
+
+        mockMvc.perform(get(BASE_URL).param("page", "-1").param("size", "0"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message")
+                        .value("page: deve ser maior ou igual a 0; size: deve ser maior ou igual a 1"));
+    }
+
     private void saveServiceOrder(String protocol, ServiceOrderStatus status, ServiceOrderType type,
                                   LocalDateTime deletedAt) {
         LocalDateTime now = LocalDateTime.now();

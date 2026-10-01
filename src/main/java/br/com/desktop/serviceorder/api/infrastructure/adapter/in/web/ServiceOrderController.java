@@ -30,6 +30,7 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -48,6 +49,7 @@ import java.net.URI;
 @RestController
 @RequestMapping("/v1/service-order-management/service-orders")
 @RequiredArgsConstructor
+@Validated
 public class ServiceOrderController {
 
     private final CreateServiceOrderUseCase createServiceOrderUseCase;
@@ -105,11 +107,13 @@ public class ServiceOrderController {
     @Operation(summary = "Busca uma ordem de servico por id")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Ordem de servico encontrada"),
+            @ApiResponse(responseCode = "400", description = "Id invalido",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "404", description = "Ordem inexistente ou removida",
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
     @GetMapping("/{id}")
-    public ResponseEntity<ServiceOrderResponse> getById(@PathVariable Long id) {
+    public ResponseEntity<ServiceOrderResponse> getById(@PathVariable @Min(value = 1, message = "deve ser maior ou igual a 1") Long id) {
         return ResponseEntity.ok(serviceOrderWebMapper.toResponse(getServiceOrderByIdUseCase.execute(id)));
     }
 
@@ -123,7 +127,7 @@ public class ServiceOrderController {
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
     @PutMapping("/{id}")
-    public ResponseEntity<ServiceOrderResponse> update(@PathVariable Long id,
+    public ResponseEntity<ServiceOrderResponse> update(@PathVariable @Min(value = 1, message = "deve ser maior ou igual a 1") Long id,
                                                        @Valid @RequestBody UpdateServiceOrderRequest request) {
         ServiceOrder updated = updateServiceOrderUseCase.execute(id, serviceOrderWebMapper.toDomain(request));
         return ResponseEntity.ok(serviceOrderWebMapper.toResponse(updated));
@@ -141,7 +145,7 @@ public class ServiceOrderController {
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
     @PatchMapping("/{id}/status")
-    public ResponseEntity<ServiceOrderResponse> changeStatus(@PathVariable Long id,
+    public ResponseEntity<ServiceOrderResponse> changeStatus(@PathVariable @Min(value = 1, message = "deve ser maior ou igual a 1") Long id,
                                                              @Valid @RequestBody ChangeStatusRequest request) {
         ServiceOrder updated = updateServiceOrderStatusUseCase.execute(id, request.status(), request.scheduledDate());
         return ResponseEntity.ok(serviceOrderWebMapper.toResponse(updated));
@@ -151,11 +155,13 @@ public class ServiceOrderController {
             description = "Remocao logica (soft delete): a linha permanece no banco com deletedAt preenchido.")
     @ApiResponses({
             @ApiResponse(responseCode = "204", description = "Ordem de servico removida", content = @Content),
+            @ApiResponse(responseCode = "400", description = "Id invalido",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "404", description = "Ordem inexistente ou ja removida",
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Long id) {
+    public ResponseEntity<Void> delete(@PathVariable @Min(value = 1, message = "deve ser maior ou igual a 1") Long id) {
         deleteServiceOrderUseCase.execute(id);
         return ResponseEntity.noContent().build();
     }

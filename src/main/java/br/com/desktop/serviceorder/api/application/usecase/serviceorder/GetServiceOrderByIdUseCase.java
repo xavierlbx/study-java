@@ -4,9 +4,9 @@ import br.com.desktop.serviceorder.api.domain.serviceorder.ServiceOrder;
 import br.com.desktop.serviceorder.api.domain.serviceorder.exception.ServiceOrderNotFoundException;
 import br.com.desktop.serviceorder.api.domain.serviceorder.repository.ServiceOrderRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Component;
 
-@Service
+@Component
 @RequiredArgsConstructor
 public class GetServiceOrderByIdUseCase {
 
