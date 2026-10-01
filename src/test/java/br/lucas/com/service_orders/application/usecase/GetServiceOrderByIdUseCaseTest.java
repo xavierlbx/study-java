@@ -1,5 +1,6 @@
 package br.lucas.com.service_orders.application.usecase;
 
+import br.lucas.com.service_orders.domain.exception.ServiceOrderNotFoundException;
 import br.lucas.com.service_orders.domain.model.ServiceOrder;
 import br.lucas.com.service_orders.domain.model.ServiceOrderStatus;
 import br.lucas.com.service_orders.domain.model.ServiceOrderType;
@@ -14,6 +15,7 @@ import java.time.LocalDateTime;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -33,6 +35,15 @@ class GetServiceOrderByIdUseCaseTest {
         ServiceOrder found = getServiceOrderByIdUseCase.execute(1L);
 
         assertThat(found).isSameAs(existing);
+    }
+
+    @Test
+    void shouldThrowNotFoundWhenServiceOrderDoesNotExist() {
+        when(serviceOrderRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> getServiceOrderByIdUseCase.execute(99L))
+                .isInstanceOf(ServiceOrderNotFoundException.class)
+                .hasMessage("Ordem de servico nao encontrada: id=99.");
     }
 
     private ServiceOrder existingServiceOrder(Long id) {
